@@ -1,3 +1,4 @@
-# PATCHED
+# Not Patched anymore !
 
-Made by TSL feel free to skid it idc 
+You will need a Proxy for the best expirense since Discord dosent like you making allat of Weebhooks
+
